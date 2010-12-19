@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>AIMP Mobile Web Control</title>
+	<meta charset="utf-8">
+	<link rel="stylesheet" href="jquery.mobile-1.0a2/jquery.mobile-1.0a2.min.css">
+	<style>
+	body{
+		-webkit-touch-callout: none;
+	}
+	a.selected{
+		color: #2567AB !important;
+		text-shadow: 0 1px #fff;
+	}
+	#player-title{
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	#player-buttons a{
+		display: block;
+		text-align: center;
+		font-size: 20px;
+		text-decoration: none;
+		color: #fff;
+		text-shadow: 0 -1px #000;
+		font-family: monospace;
+	}
+	#player-buttons>div:first-child a{
+		line-height: 100px;
+	}
+	#player-buttons a:hover{
+		color: #eee;
+	}
+	#player-buttons a:active{
+		text-shadow: 0 0 15px #fff;
+	}
+	#player-buttons a#play-button{
+		font-size: 60px;
+		text-indent: 10px;
+	}
+	#pause-button{
+		letter-spacing: -3px;
+		-webkit-transform: scaleX(.6);
+	}
+	#stop-button{
+		-webkit-transform: scaleX(1.6);
+	}
+	#prev-button, #next-button{
+		letter-spacing: -3px;
+		line-height: 40px;
+	}
+	#slider{
+		position: absolute;
+		left: -999px;
+	}
+	#player-slider,
+	#player-options{
+		text-align: center;
+		margin: 25px auto;
+	}
+	div.ui-slider{
+		margin: 0;
+		width: 90% !important;
+	}
+	</style>
+	<script src="jquery-1.4.4.min.js"></script>
+	<script src="jquery.mobile-1.0a2/jquery.mobile-1.0a2.min.js"></script>
+	<script>
+		$(function(){
+		localStorage.clear();
+			var $playlistsPage = $('#playlists-page');
+			var $playlists = $('#playlists');
+			var $songsPage = $('#songs-page');
+			var $songs = $('#songs');
+			var $playerPage = $('#player-page');
+			var $playerTitle = $('#player-title');
+			var $slider = $('#slider');
+			var $checkboxRepeat = $('#checkbox-repeat');
+			var $checkboxRandom = $('#checkbox-random');
+			
+			$.ajaxSetup({
+				url: '',
+				cache: false
+			});
+			
+			var playlistCache, songCurrentCache, playlistSongsCache, volumeCache;
+			var playlistData, playlistID, currentPlaylistID, currentPlaylistName;
+			var currentSongIndex, currentSongName;
+			var init = function(){
+				$.ajax({
+					data: {
+						action: 'get_playlist_list',
+					},
+					success: function(data){
+						if (!data) return;
+						playlistData = data;
+						var dataJSON = JSON.stringify(data);
+						if (dataJSON != playlistCache){
+							playlistCache = dataJSON;
+							var html = '';
+							$.each(data, function(){
+								html += '<li><a href="#songs-page" data-id="' + this.id + '">'+ this.name +'</a></li>';
+							});
+							$playlists.html(html).listview('refresh');
+						}
+					}
+				});
+				
+				var getSong = function(){
+					if (!playlistData){
+						setTimeout(getSong, 1000);
+						return;
+					}
+					$.ajax({
+						data: {
+							action: 'get_song_current'
+						},
+						success: function(data){
+							if (!data || !data.status || data.status != 'OK') return;
+							currentPlaylistID = data.PlayingList;
+							currentPlaylistName = (function(){
+								for (var d in playlistData){
+									var dd = playlistData[d];
+									if (dd.id == currentPlaylistID) return dd.name;
+								}
+							})();
+							currentSongIndex = data.PlayingFile;
+							currentSongName = data.PlayingFileName;
+							
+							if (!playlistID) $songsPage.find('h1').text(currentPlaylistName);
+							
+							var dataJSON = JSON.stringify(data);
+							if (dataJSON != songCurrentCache){
+								songCurrentCache = dataJSON;
+								$playerPage.find('h1').text(currentSongName);
+								$playerTitle.text(currentSongName);
+							}
+							$playlists.find('.selected').removeClass('selected');
+							$playlists.find('[data-id='+currentPlaylistID+']').addClass('selected');
+							
+							$songs.find('.selected').removeClass('selected');
+							if (playlistID == currentPlaylistID){
+								$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
+							}
+						}
+					});
+				};
+				getSong();
+				
+				$.ajax({
+					data: {
+						action: 'get_volume',
+					},
+					success: function(vol){
+						if (vol == volumeCache) return;
+						volumeCache = vol;
+						$slider.val(vol).keyup();
+					}
+				});
+				
+				$.ajax({
+					data: {
+						action: 'get_player_status',
+					},
+					success: function(data){
+						if (!data || !data.status || data.status != 'OK') return;
+						$checkboxRepeat.attr('checked', parseInt(data.RepeatFile, 10)).checkboxradio('refresh');
+						$checkboxRandom.attr('checked', parseInt(data.RandomFile, 10)).checkboxradio('refresh');
+					}
+				});
+			};
+			init();
+			$.ajax({
+				data: {
+					action: 'get_update_time'
+				},
+				success: function(time){
+					setInterval(init, parseInt(time, 10)*1000);
+				}
+			});
+			
+			var getSongs = function(){
+				if (!currentPlaylistID){
+					setTimeout(getSongs, 1000);
+					return;
+				}
+				playlistID = currentPlaylistID;
+				$.ajax({
+					data: {
+						action: 'get_playlist_songs',
+						id: playlistID
+					},
+					success: function(d){
+						if (!d || !d.status || d.status != 'OK') return;
+						var dataJSON = JSON.stringify(d);
+						if (dataJSON != playlistSongsCache){
+							playlistSongsCache = dataJSON;
+							var songs = d.songs;
+							var html = '';
+							$.each(songs, function(){
+								html += '<li><a href="#player-page">'+ this.name +'</a></li>';
+							});
+							$songs.html(html).listview('refresh');
+						}
+						$songs.find('.selected').removeClass('selected');
+						$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
+					}
+				});
+			};
+			getSongs();
+			
+			var volReq = null;
+			$slider.change(function(){
+				if (volReq) volReq.abort();
+				volReq = $.ajax({
+					data: {
+						action: 'set_volume',
+						volume: $slider.val()
+					},
+					success: function(){
+						volReq = null;
+					}
+				});
+			});
+			
+			$playlistsPage.find('li a').live('click', function(){
+				var el = $(this);
+				var name = el.text();
+				$songsPage.find('h1').text(name);
+				var id = el.data('id');
+				if (id != playlistID) $songs.empty();
+				$.ajax({
+					data: {
+						action: 'get_playlist_songs',
+						id: id
+					},
+					success: function(data){
+						if (!data || !data.status || data.status != 'OK') return;
+						playlistID = id;
+						var dataJSON = JSON.stringify(data);
+						if (dataJSON != playlistSongsCache){
+							playlistSongsCache = dataJSON;
+							var songs = data.songs;
+							var html = '';
+							$.each(songs, function(){
+								html += '<li><a href="#player-page">'+ this.name +'</a></li>';
+							});
+							$songs.html(html).listview('refresh');
+						}
+						if (playlistID == currentPlaylistID){
+							$songs.find('.selected').removeClass('selected');
+							$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
+						}
+					}
+				});
+			});
+			
+			$songsPage.find('li a').live('click', function(){
+				var el = $(this);
+				if (el.hasClass('selected')) return;
+				var elParent = el.parents('li:first');
+				elParent.parent().find('.selected').removeClass('selected');
+				el.addClass('selected');
+				currentSongName = el.text();
+				currentSongIndex = elParent.index();
+				$playerPage.find('h1').text(currentSongName);
+				$playerTitle.text(currentSongName);
+				$.ajax({
+					data: {
+						action: 'set_song_play',
+						playlist: playlistID,
+						song: currentSongIndex
+					}
+				});
+			});
+			
+			$('#player-buttons a').live('click', function(){
+				var el = $(this);
+				var action = el.attr('id').replace('-button', '');
+				if (action == 'prev') action = 'prevous'; // obviously typo
+				$.ajax({
+					data: {
+						action: 'player_' + action
+					}
+				});
+			});
+			
+			$checkboxRepeat.live('change', function(){
+				var checked = $checkboxRepeat.attr('checked');
+				$.ajax({
+					data: {
+						action: 'set_player_status',
+						statusType: 'repeat',
+						value: (+checked)
+					}
+				});
+			});
+			$checkboxRandom.live('change', function(){
+				var checked = $checkboxRandom.attr('checked');
+				$.ajax({
+					data: {
+						action: 'set_player_status',
+						statusType: 'random',
+						value: (+checked)
+					}
+				});
+			});
+			
+			$('#playlists-page .ui-header, #songs-page .ui-header').live('swiperight', function(){
+				location.hash = '#player-page';
+				$songsPage.find('h1').text(currentPlaylistName);
+				$.ajax({
+					data: {
+						action: 'get_playlist_songs',
+						id: currentPlaylistID
+					},
+					success: function(data){
+						if (!data || !data.status || data.status != 'OK') return;
+						playlistID = currentPlaylistID;
+						var dataJSON = JSON.stringify(data);
+						if (dataJSON != playlistSongsCache){
+							playlistSongsCache = dataJSON;
+							var songs = data.songs;
+							var html = '';
+							$.each(songs, function(){
+								html += '<li><a href="#player-page">'+ this.name +'</a></li>';
+							});
+							$songs.html(html).listview('refresh');
+						}
+						$songs.find('.selected').removeClass('selected');
+						$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
+					}
+				});
+			});
+		});
+	</script>
+</head>
+<body>
+
+<div data-role="page" id="playlists-page">
+	<div data-role="header" data-nobackbtn="true">
+		<h1>Playlists</h1>
+	</div>
+	<div data-role="content">
+		<ul id="playlists" data-role="listview">
+		</ul>
+	</div>
+</div>
+
+<div data-role="page" id="songs-page">
+	<div data-role="header">
+		<a href="#playlists-page" data-icon="arrow-l" data-back="true">Playlists</a>
+		<h1>&nbsp;</h1>
+	</div>
+	<div data-role="content">
+		<ul id="songs" data-role="listview">
+		</ul>
+	</div>
+</div>
+
+<div data-role="page" id="player-page" data-theme="a">
+	<div data-role="header">
+		<a href="#songs-page" data-icon="arrow-l" data-back="true">Songs</a>
+		<h1>&nbsp;</h1>
+		<a href="#options-page" data-transition="flip" data-icon="gear">Options</a>
+	</div>
+	<div data-role="content">
+		<div id="player-title">&nbsp;</div>
+		<div id="player-buttons">
+			<div class="ui-grid-b">
+				<div class="ui-block-a"><a href="#" id="pause-button">&#9608; &#9608;</a></div>
+				<div class="ui-block-b"><a href="#" id="play-button">&#9658;</a></div>
+				<div class="ui-block-c"><a href="#" id="stop-button">&#9608;</a></div>
+			</div>
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><a href="#" id="prev-button">&#9668;&#9668;</a></div>
+				<div class="ui-block-b"><a href="#" id="next-button">&#9658;&#9658;</a></div>
+			</div>
+		</div>
+		<div id="player-slider">
+			<input type="range" id="slider" value="0" min="0" max="100" data-theme="b">
+		</div>
+	</div>
+</div>
+
+<div data-role="page" id="options-page" data-theme="a">
+	<div data-role="header" data-nobackbtn="true">
+		<h1>Options</h1>
+		<a href="#player-page" data-transition="flip" data-back="true" data-icon="check" data-theme="b" class="ui-btn-right">Done</a>
+	</div>
+	<div data-role="content">
+		<div data-role="controlgroup" id="player-options">
+			<input type="checkbox" name="checkbox-repeat" id="checkbox-repeat" data-theme="a">
+			<label for="checkbox-repeat">Repeat</label>
+			<input type="checkbox" name="checkbox-random" id="checkbox-random" data-theme="a">
+			<label for="checkbox-random">Shuffle</label>
+		</div>
+	</div>
+</div>
+
+</body>
+</html>
