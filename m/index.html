@@ -69,7 +69,6 @@
 	<script src="jquery.mobile-1.0a2/jquery.mobile-1.0a2.min.js"></script>
 	<script>
 		$(function(){
-		localStorage.clear();
 			var $playlistsPage = $('#playlists-page');
 			var $playlists = $('#playlists');
 			var $songsPage = $('#songs-page');
@@ -88,6 +87,45 @@
 			var playlistCache, songCurrentCache, playlistSongsCache, volumeCache;
 			var playlistData, playlistID, currentPlaylistID, currentPlaylistName;
 			var currentSongIndex, currentSongName;
+			var getSong = function(){
+				if (!playlistData){
+					setTimeout(getSong, 1000);
+					return;
+				}
+				$.ajax({
+					data: {
+						action: 'get_song_current'
+					},
+					success: function(data){
+						if (!data || !data.status || data.status != 'OK') return;
+						currentPlaylistID = data.PlayingList;
+						currentPlaylistName = (function(){
+							for (var d in playlistData){
+								var dd = playlistData[d];
+								if (dd.id == currentPlaylistID) return dd.name;
+							}
+						})();
+						currentSongIndex = data.PlayingFile;
+						currentSongName = data.PlayingFileName;
+						
+						if (!playlistID) $songsPage.find('h1').text(currentPlaylistName);
+						
+						var dataJSON = JSON.stringify(data);
+						if (dataJSON != songCurrentCache){
+							songCurrentCache = dataJSON;
+							$playerPage.find('h1').text(currentSongName);
+							$playerTitle.text(currentSongName);
+						}
+						$playlists.find('.selected').removeClass('selected');
+						$playlists.find('[data-id='+currentPlaylistID+']').addClass('selected');
+						
+						$songs.find('.selected').removeClass('selected');
+						if (playlistID == currentPlaylistID){
+							$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
+						}
+					}
+				});
+			};
 			var init = function(){
 				$.ajax({
 					data: {
@@ -108,45 +146,6 @@
 					}
 				});
 				
-				var getSong = function(){
-					if (!playlistData){
-						setTimeout(getSong, 1000);
-						return;
-					}
-					$.ajax({
-						data: {
-							action: 'get_song_current'
-						},
-						success: function(data){
-							if (!data || !data.status || data.status != 'OK') return;
-							currentPlaylistID = data.PlayingList;
-							currentPlaylistName = (function(){
-								for (var d in playlistData){
-									var dd = playlistData[d];
-									if (dd.id == currentPlaylistID) return dd.name;
-								}
-							})();
-							currentSongIndex = data.PlayingFile;
-							currentSongName = data.PlayingFileName;
-							
-							if (!playlistID) $songsPage.find('h1').text(currentPlaylistName);
-							
-							var dataJSON = JSON.stringify(data);
-							if (dataJSON != songCurrentCache){
-								songCurrentCache = dataJSON;
-								$playerPage.find('h1').text(currentSongName);
-								$playerTitle.text(currentSongName);
-							}
-							$playlists.find('.selected').removeClass('selected');
-							$playlists.find('[data-id='+currentPlaylistID+']').addClass('selected');
-							
-							$songs.find('.selected').removeClass('selected');
-							if (playlistID == currentPlaylistID){
-								$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
-							}
-						}
-					});
-				};
 				getSong();
 				
 				$.ajax({
@@ -276,13 +275,16 @@
 				});
 			});
 			
-			$('#player-buttons a').live('click', function(){
+			$('#player-buttons a').live($.support.touch ? 'tap' : 'click', function(){
 				var el = $(this);
 				var action = el.attr('id').replace('-button', '');
 				if (action == 'prev') action = 'prevous'; // obviously typo
 				$.ajax({
 					data: {
 						action: 'player_' + action
+					},
+					success: function(){
+						if (action == 'prevous' || action == 'next') getSong();
 					}
 				});
 			});
@@ -302,7 +304,7 @@
 				$.ajax({
 					data: {
 						action: 'set_player_status',
-						statusType: 'random',
+						statusType: 'shuffle',
 						value: (+checked)
 					}
 				});
