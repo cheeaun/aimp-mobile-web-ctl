@@ -3,7 +3,9 @@ AIMP Mobile Web Control
 
 This is a mobile web control interface, powered by [jQuery Mobile](http://jquerymobile.com/), for [AIMP](http://aimp.ru/), a desktop music player for Windows.
 
-![Screenshot of AIMP Mobile Web Control interface on Mobile Safari](http://f.cl.ly/items/2d410D0T0z3O3p2D3A1d/IMG_0105.PNG)
+![Screenshot of AIMP Mobile Web Control interface on Mobile Safari, Playlists](http://f.cl.ly/items/3N1q3a3s1J3d1E1t2A2h/IMG_0128.PNG)
+![Screenshot of AIMP Mobile Web Control interface on Mobile Safari, Songs](http://f.cl.ly/items/2E061e040X393K3g3847/IMG_0129.PNG)
+![Screenshot of AIMP Mobile Web Control interface on Mobile Safari, Player](http://f.cl.ly/items/102y3K1p3G2P34340M3Y/IMG_0130.PNG)
 
 How to use this
 ---------------
