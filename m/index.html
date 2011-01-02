@@ -51,23 +51,48 @@
 		letter-spacing: -3px;
 		line-height: 40px;
 	}
-	#slider{
+	#progress,
+	#volume{
 		position: absolute;
 		left: -999px;
 	}
-	#player-slider,
-	#player-options{
+	#player-info{
+		background-image: none;
+		background-color: rgba(0,0,0,.3);
+		border-bottom: 1px solid #666;
+	}
+	#player-progress{
 		text-align: center;
-		margin: 25px auto;
+		margin: 0 auto 10px;
+	}
+	#player-volume,
+	#player-options{
+		margin: 15px auto 10px;
+	}
+	#player-progress,
+	#player-volume{
+		width: 90%;
+	}
+	#progress-start{
+		text-align: left;
+	}
+	#progress-end{
+		text-align: right;
+	}
+	#player-progress .progress-info{
+		font-size: 90%;
+		opacity: .5;
 	}
 	div.ui-slider{
 		margin: 0;
-		width: 90% !important;
+		width: 100% !important;
 	}
 	</style>
 	<script src="jquery-1.4.4.min.js"></script>
 	<script src="jquery.mobile-1.0a2/jquery.mobile-1.0a2.min.js"></script>
 	<script>
+		var playlistData, playlistID, currentPlaylistID, currentPlaylistName;
+		var playlistCRC;
 		$(function(){
 			var $playlistsPage = $('#playlists-page');
 			var $playlists = $('#playlists');
@@ -75,7 +100,10 @@
 			var $songs = $('#songs');
 			var $playerPage = $('#player-page');
 			var $playerTitle = $('#player-title');
-			var $slider = $('#slider');
+			var $progress = $('#progress');
+			var $progressStart = $('#progress-start');
+			var $progressEnd = $('#progress-end');
+			var $volume = $('#volume');
 			var $checkboxRepeat = $('#checkbox-repeat');
 			var $checkboxRandom = $('#checkbox-random');
 			
@@ -85,7 +113,6 @@
 			});
 			
 			var playlistCache, songCurrentCache, playlistSongsCache, volumeCache;
-			var playlistData, playlistID, currentPlaylistID, currentPlaylistName;
 			var currentSongIndex, currentSongName;
 			var getSong = function(){
 				if (!playlistData){
@@ -126,6 +153,42 @@
 					}
 				});
 			};
+			var getSongs = function(){
+				if (!currentPlaylistID){
+					setTimeout(getSongs, 1000);
+					return;
+				}
+				if (!playlistID) playlistID = currentPlaylistID;
+				$.ajax({
+					data: {
+						action: 'get_playlist_crc',
+						id: playlistID
+					},
+					success: function(crc){
+						if (crc == playlistCRC) return;
+						playlistCRC = crc;
+						$.ajax({
+							data: {
+								action: 'get_playlist_songs',
+								id: playlistID
+							},
+							success: function(d){
+								if (!d || !d.status || d.status != 'OK') return;
+								var songs = d.songs;
+								var html = '';
+								$.each(songs, function(){
+									html += '<li><a href="#player-page">'+ this.name +'</a></li>';
+								});
+								$songs.html(html).listview('refresh');
+								if (playlistID == currentPlaylistID){
+									$songs.find('.selected').removeClass('selected');
+									$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
+								}
+							}
+						});
+					}
+				});
+			};
 			var init = function(){
 				$.ajax({
 					data: {
@@ -147,6 +210,7 @@
 				});
 				
 				getSong();
+				getSongs();
 				
 				$.ajax({
 					data: {
@@ -155,7 +219,7 @@
 					success: function(vol){
 						if (vol == volumeCache) return;
 						volumeCache = vol;
-						$slider.val(vol).keyup();
+						$volume.val(vol).keyup();
 					}
 				});
 				
@@ -180,43 +244,13 @@
 				}
 			});
 			
-			var getSongs = function(){
-				if (!currentPlaylistID){
-					setTimeout(getSongs, 1000);
-					return;
-				}
-				playlistID = currentPlaylistID;
-				$.ajax({
-					data: {
-						action: 'get_playlist_songs',
-						id: playlistID
-					},
-					success: function(d){
-						if (!d || !d.status || d.status != 'OK') return;
-						var dataJSON = JSON.stringify(d);
-						if (dataJSON != playlistSongsCache){
-							playlistSongsCache = dataJSON;
-							var songs = d.songs;
-							var html = '';
-							$.each(songs, function(){
-								html += '<li><a href="#player-page">'+ this.name +'</a></li>';
-							});
-							$songs.html(html).listview('refresh');
-						}
-						$songs.find('.selected').removeClass('selected');
-						$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
-					}
-				});
-			};
-			getSongs();
-			
 			var volReq = null;
-			$slider.change(function(){
+			$volume.change(function(){
 				if (volReq) volReq.abort();
 				volReq = $.ajax({
 					data: {
 						action: 'set_volume',
-						volume: $slider.val()
+						volume: $volume.val()
 					},
 					success: function(){
 						volReq = null;
@@ -230,30 +264,8 @@
 				$songsPage.find('h1').text(name);
 				var id = el.data('id');
 				if (id != playlistID) $songs.empty();
-				$.ajax({
-					data: {
-						action: 'get_playlist_songs',
-						id: id
-					},
-					success: function(data){
-						if (!data || !data.status || data.status != 'OK') return;
-						playlistID = id;
-						var dataJSON = JSON.stringify(data);
-						if (dataJSON != playlistSongsCache){
-							playlistSongsCache = dataJSON;
-							var songs = data.songs;
-							var html = '';
-							$.each(songs, function(){
-								html += '<li><a href="#player-page">'+ this.name +'</a></li>';
-							});
-							$songs.html(html).listview('refresh');
-						}
-						if (playlistID == currentPlaylistID){
-							$songs.find('.selected').removeClass('selected');
-							$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
-						}
-					}
-				});
+				playlistID = id;
+				getSongs();
 			});
 			
 			$songsPage.find('li a').live('click', function(){
@@ -313,26 +325,55 @@
 			$('#playlists-page .ui-header, #songs-page .ui-header').live('swiperight', function(){
 				location.hash = '#player-page';
 				$songsPage.find('h1').text(currentPlaylistName);
-				$.ajax({
+				playlistID = currentPlaylistID;
+				getSongs();
+			});
+			
+			var progUpdate = false;
+			var padZero = function(num){
+				if (num < 10) return '0' + num;
+				return num;
+			};
+			var formatProg = function(time){
+				time = parseInt(time, 10);
+				var m = Math.floor(time / 60);
+				var s = time % 60;
+				return padZero(m) + ':' + padZero(s);
+			};
+			var progTrackReq;
+			setInterval(function(){
+				// only run this every second when player page is shown.
+				if (location.hash != '#player-page') return;
+				if (progTrackReq) progTrackReq.abort();
+				progTrackReq = $.ajax({
 					data: {
-						action: 'get_playlist_songs',
-						id: currentPlaylistID
+						action: 'get_track_position',
 					},
 					success: function(data){
-						if (!data || !data.status || data.status != 'OK') return;
-						playlistID = currentPlaylistID;
-						var dataJSON = JSON.stringify(data);
-						if (dataJSON != playlistSongsCache){
-							playlistSongsCache = dataJSON;
-							var songs = data.songs;
-							var html = '';
-							$.each(songs, function(){
-								html += '<li><a href="#player-page">'+ this.name +'</a></li>';
-							});
-							$songs.html(html).listview('refresh');
-						}
-						$songs.find('.selected').removeClass('selected');
-						$songs.find('a:eq('+currentSongIndex+')').addClass('selected');
+						if (!data || !data.position) return;
+						progUpdate = true;
+						var p = data.position, l = data.length;
+						$progress.val(p/l*100).data('max', l).keyup();
+						$progressStart.text(formatProg(p));
+						$progressEnd.text('-' + formatProg(l-p));
+					}
+				});
+			}, 1000);
+			
+			var progReq;
+			$progress.change(function(e){
+				if (progUpdate){
+					progUpdate = false;
+					return;
+				}
+				if (progReq) progReq.abort();
+				progReq = $.ajax({
+					data: {
+						action: 'set_track_position',
+						position: $progress.val()/100*$progress.data('max')
+					},
+					success: function(){
+						progReq = null;
 					}
 				});
 			});
@@ -368,8 +409,17 @@
 		<h1>&nbsp;</h1>
 		<a href="#options-page" data-transition="flip" data-icon="gear">Options</a>
 	</div>
-	<div data-role="content">
+	<div data-role="content" data-theme="a" id="player-info">
 		<div id="player-title">&nbsp;</div>
+		<div id="player-progress">
+			<div class="ui-grid-a">
+				<div class="ui-block-a progress-info" id="progress-start">&nbsp;</div>
+				<div class="ui-block-b progress-info" id="progress-end">&nbsp;</div>
+			</div>
+			<input type="range" id="progress" value="0" min="0" max="100" data-theme="a">
+		</div>
+	</div>
+	<div data-role="content">
 		<div id="player-buttons">
 			<div class="ui-grid-b">
 				<div class="ui-block-a"><a href="#" id="pause-button">&#9608; &#9608;</a></div>
@@ -381,8 +431,8 @@
 				<div class="ui-block-b"><a href="#" id="next-button">&#9658;&#9658;</a></div>
 			</div>
 		</div>
-		<div id="player-slider">
-			<input type="range" id="slider" value="0" min="0" max="100" data-theme="b">
+		<div id="player-volume">
+			<input type="range" id="volume" value="0" min="0" max="100" data-theme="b">
 		</div>
 	</div>
 </div>
