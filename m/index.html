@@ -3,7 +3,7 @@
 <head>
 	<title>AIMP Mobile Web Control</title>
 	<meta charset="utf-8">
-	<link rel="stylesheet" href="jquery.mobile-1.0a2/jquery.mobile-1.0a2.min.css">
+	<link rel="stylesheet" href="jquery.mobile-1.0a4.1/jquery.mobile-1.0a4.1.min.css">
 	<style>
 	body{
 		-webkit-touch-callout: none;
@@ -11,6 +11,9 @@
 	a.selected{
 		color: #2567AB !important;
 		text-shadow: 0 1px #fff;
+	}
+	.ui-header a{
+		text-decoration: none !important;
 	}
 	#player-title{
 		text-align: center;
@@ -88,24 +91,24 @@
 		width: 100% !important;
 	}
 	</style>
-	<script src="jquery-1.4.4.min.js"></script>
-	<script src="jquery.mobile-1.0a2/jquery.mobile-1.0a2.min.js"></script>
+	<script src="jquery-1.6.1.min.js"></script>
+	<script src="jquery.mobile-1.0a4.1/jquery.mobile-1.0a4.1.min.js"></script>
 	<script>
 		var playlistData, playlistID, currentPlaylistID, currentPlaylistName;
 		var playlistCRC;
 		$(function(){
 			var $playlistsPage = $('#playlists-page');
-			var $playlists = $('#playlists');
+			var $playlists = $('#playlists').listview();
 			var $songsPage = $('#songs-page');
-			var $songs = $('#songs');
+			var $songs = $('#songs').listview();
 			var $playerPage = $('#player-page');
 			var $playerTitle = $('#player-title');
 			var $progress = $('#progress');
 			var $progressStart = $('#progress-start');
 			var $progressEnd = $('#progress-end');
 			var $volume = $('#volume');
-			var $checkboxRepeat = $('#checkbox-repeat');
-			var $checkboxRandom = $('#checkbox-random');
+			var $checkboxRepeat = $('#checkbox-repeat').checkboxradio();
+			var $checkboxRandom = $('#checkbox-random').checkboxradio();
 			
 			$.ajaxSetup({
 				url: '',
@@ -219,7 +222,12 @@
 					success: function(vol){
 						if (vol == volumeCache) return;
 						volumeCache = vol;
-						$volume.val(vol).keyup();
+						$volume.val(vol);
+						if ($volume.data('slider')){
+							$volume.slider('refresh');
+						} else {
+							$volume.slider();
+						}
 					}
 				});
 				
@@ -229,8 +237,8 @@
 					},
 					success: function(data){
 						if (!data || !data.status || data.status != 'OK') return;
-						$checkboxRepeat.attr('checked', parseInt(data.RepeatFile, 10)).checkboxradio('refresh');
-						$checkboxRandom.attr('checked', parseInt(data.RandomFile, 10)).checkboxradio('refresh');
+						$checkboxRepeat.attr('checked', !!parseInt(data.RepeatFile, 10)).checkboxradio('refresh');
+						$checkboxRandom.attr('checked', !!parseInt(data.RandomFile, 10)).checkboxradio('refresh');
 					}
 				});
 			};
@@ -287,7 +295,7 @@
 				});
 			});
 			
-			$('#player-buttons a').live($.support.touch ? 'tap' : 'click', function(){
+			$('#player-buttons a').live('click', function(){
 				var el = $(this);
 				var action = el.attr('id').replace('-button', '');
 				if (action == 'prev') action = 'prevous'; // obviously typo
@@ -323,7 +331,7 @@
 			});
 			
 			$('#playlists-page .ui-header, #songs-page .ui-header').live('swiperight', function(){
-				location.hash = '#player-page';
+				$.mobile.changePage('#player-page');
 				$songsPage.find('h1').text(currentPlaylistName);
 				playlistID = currentPlaylistID;
 				getSongs();
@@ -353,7 +361,12 @@
 						if (!data || !data.position) return;
 						progUpdate = true;
 						var p = data.position, l = data.length;
-						$progress.val(p/l*100).data('max', l).keyup();
+						$progress.val(p/l*100).data('max', l);
+						if ($progress.data('slider')){
+							$progress.slider('refresh');
+						} else {
+							$progress.slider();
+						}
 						$progressStart.text(formatProg(p));
 						$progressEnd.text('-' + formatProg(l-p));
 					}
@@ -383,7 +396,7 @@
 <body>
 
 <div data-role="page" id="playlists-page">
-	<div data-role="header" data-nobackbtn="true">
+	<div data-role="header">
 		<h1>Playlists</h1>
 	</div>
 	<div data-role="content">
@@ -416,7 +429,7 @@
 				<div class="ui-block-a progress-info" id="progress-start">&nbsp;</div>
 				<div class="ui-block-b progress-info" id="progress-end">&nbsp;</div>
 			</div>
-			<input type="range" id="progress" value="0" min="0" max="100" data-theme="a">
+			<input type="range" id="progress" value="0" min="0" max="100" data-theme="a" data-role="none">
 		</div>
 	</div>
 	<div data-role="content">
@@ -432,13 +445,13 @@
 			</div>
 		</div>
 		<div id="player-volume">
-			<input type="range" id="volume" value="0" min="0" max="100" data-theme="b">
+			<input type="range" id="volume" value="0" min="0" max="100" data-theme="b" data-role="none">
 		</div>
 	</div>
 </div>
 
 <div data-role="page" id="options-page" data-theme="a">
-	<div data-role="header" data-nobackbtn="true">
+	<div data-role="header">
 		<h1>Options</h1>
 		<a href="#player-page" data-transition="flip" data-back="true" data-icon="check" data-theme="b" class="ui-btn-right">Done</a>
 	</div>
