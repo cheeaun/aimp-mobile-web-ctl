@@ -3,10 +3,12 @@
 <head>
 	<title>AIMP Mobile Web Control</title>
 	<meta charset="utf-8">
-	<link rel="stylesheet" href="jquery.mobile-1.0a4.1/jquery.mobile-1.0a4.1.min.css">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel="stylesheet" href="jquery.mobile-1.0b1/jquery.mobile-1.0b1.min.css">
 	<style>
 	body{
 		-webkit-touch-callout: none;
+		background-color: #000;
 	}
 	a.selected{
 		color: #2567AB !important;
@@ -92,15 +94,15 @@
 	}
 	</style>
 	<script src="jquery-1.6.1.min.js"></script>
-	<script src="jquery.mobile-1.0a4.1/jquery.mobile-1.0a4.1.min.js"></script>
+	<script src="jquery.mobile-1.0b1/jquery.mobile-1.0b1.min.js"></script>
 	<script>
 		var playlistData, playlistID, currentPlaylistID, currentPlaylistName;
 		var playlistCRC;
 		$(function(){
 			var $playlistsPage = $('#playlists-page');
-			var $playlists = $('#playlists').listview();
+			var $playlists = $('#playlists');
 			var $songsPage = $('#songs-page');
-			var $songs = $('#songs').listview();
+			var $songs = $('#songs');
 			var $playerPage = $('#player-page');
 			var $playerTitle = $('#player-title');
 			var $progress = $('#progress');
@@ -182,6 +184,7 @@
 								$.each(songs, function(){
 									html += '<li><a href="#player-page">'+ this.name +'</a></li>';
 								});
+								if (!$songsPage.data('page')) $songsPage.page();
 								$songs.html(html).listview('refresh');
 								if (playlistID == currentPlaylistID){
 									$songs.find('.selected').removeClass('selected');
@@ -207,6 +210,7 @@
 							$.each(data, function(){
 								html += '<li><a href="#songs-page" data-id="' + this.id + '">'+ this.name +'</a></li>';
 							});
+							if (!$playlistsPage.data('page')) $playlistsPage.page()
 							$playlists.html(html).listview('refresh');
 						}
 					}
@@ -266,7 +270,7 @@
 				});
 			});
 			
-			$playlistsPage.find('li a').live('click', function(){
+			$playlistsPage.find('li a').live('tap', function(){
 				var el = $(this);
 				var name = el.text();
 				$songsPage.find('h1').text(name);
@@ -276,7 +280,7 @@
 				getSongs();
 			});
 			
-			$songsPage.find('li a').live('click', function(){
+			$songsPage.find('li a').live('tap', function(){
 				var el = $(this);
 				if (el.hasClass('selected')) return;
 				var elParent = el.parents('li:first');
@@ -295,7 +299,7 @@
 				});
 			});
 			
-			$('#player-buttons a').live('click', function(){
+			$('#player-buttons a').live('tap', function(){
 				var el = $(this);
 				var action = el.attr('id').replace('-button', '');
 				if (action == 'prev') action = 'prevous'; // obviously typo
