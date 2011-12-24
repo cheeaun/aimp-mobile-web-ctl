@@ -4,7 +4,7 @@
 	<title>AIMP Mobile Web Control</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimum-scale=1.0, maximum-scale=1.0">
-	<link rel="stylesheet" href="jquery.mobile-1.0b1/jquery.mobile-1.0b1.min.css">
+	<link rel="stylesheet" href="jquery.mobile-1.0/jquery.mobile-1.0.min.css">
 	<style>
 	body{
 		-webkit-touch-callout: none;
@@ -92,9 +92,13 @@
 		margin: 0;
 		width: 100% !important;
 	}
+	/* Performance fix from https://forum.jquery.com/topic/why-jqm-touchscreen-list-scrolling-performance-stinks-and-what-to-do-about-it */
+	.ui-btn-up-c, .ui-btn-hover-c, .ui-btn-down-c{
+		background-image: -webkit-linear-gradient(#FDFDFD, #EEE);
+	}
 	</style>
-	<script src="jquery-1.6.1.min.js"></script>
-	<script src="jquery.mobile-1.0b1/jquery.mobile-1.0b1.min.js"></script>
+	<script src="jquery-1.6.4.min.js"></script>
+	<script src="jquery.mobile-1.0/jquery.mobile-1.0.min.js"></script>
 	<script>
 		var playlistData, playlistID, currentPlaylistID, currentPlaylistName;
 		var playlistCRC;
